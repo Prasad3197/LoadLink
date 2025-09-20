@@ -9,24 +9,32 @@ import Link from "next/link"
 import { getMyVehiclesApi, VehicleOut } from "@/services/vehicles"
 import { useEffect, useState } from "react"
 import { getMyTripsApi, TripOut } from "@/services/trips"
+import { getAllPaymentsApi, PaymentOut } from "@/services/payment"
+import { getShipperByIdApi, UserOut } from "@/services/user"
+import { set } from "date-fns"
 
 export default function CarrierDashboard() {
   const { user } = useAuth()
   const [trips, setTrips] = useState<TripOut[]>([]);
   const [vehicles, setVehicles] = useState<VehicleOut[]>([]);
+  const [payments, setPayments] = useState<PaymentOut[]>([]);
+  const [userData, setUserData] = useState<UserOut>(); // Adjust type as needed
     useEffect(() => {
       async function fetchData() {
         try {
           const [tripsRes, vehiclesRes] = await Promise.all([
             getMyTripsApi(),
             getMyVehiclesApi(),
+
           ]);
           setTrips(tripsRes);
           setVehicles(vehiclesRes);
 
           // if payments exist
-          // const paymentsRes = await getMyPaymentsApi()
-          // setPayments(paymentsRes)
+          const userres=await getShipperByIdApi(user?.id || "")
+          setUserData(userres)
+          const paymentsRes = await getAllPaymentsApi();
+          setPayments(paymentsRes);
         } catch (err) {
           console.error("Error fetching dashboard data:", err);
         }
@@ -38,18 +46,18 @@ export default function CarrierDashboard() {
   const userVehicles = vehicles.filter((v) => v.carrier_id === user?.id)
   const userBookings = bookings.filter((b) => {
     const trip = trips.find((t) => t.id === b.trip_id)
-    return trip?.carrier_id === user?.id
+    return trip?.carrier_id === userData?.id
   })
   const recentTrips = userTrips.slice(0, 3)
 
-  const userPayments = payments.filter((p) => p.toUserId === user?.id)
+  const userPayments = payments.filter((p) => p.to_user_id === user?.id)
   const recentPayments = userPayments.slice(0, 3)
 
   const stats = {
     activeTrips: userTrips.filter((t) => t.status === "active").length,
     totalEarnings: userPayments.reduce((sum, p) => sum + p.amount, 0),
     totalVehicles: userVehicles.length,
-    avgRating: user?.rating || 0,
+    avgRating: userData?.rating || 4,
   }
 
   return (
@@ -173,7 +181,7 @@ export default function CarrierDashboard() {
             {recentPayments.length > 0 ? (
               <div className="space-y-3">
                 {recentPayments.map((payment) => {
-                  const booking = bookings.find((b) => b.id === payment.bookingId)
+                  const booking = bookings.find((b) => b.id === payment.booking_id)
                   const trip = booking ? trips.find((t) => t.id === booking.trip_id) : null
                   return (
                     <div
