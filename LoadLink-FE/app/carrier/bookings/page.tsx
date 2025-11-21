@@ -25,6 +25,7 @@ import {
   CheckCircle,
   Package,
   QrCode,
+  IndianRupee,
 } from "lucide-react";
 import { TripOut } from "@/services/trips";
 import { useEffect } from "react";
@@ -247,13 +248,13 @@ export default function CarrierBookingsPage() {
 
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <IndianRupee className="h-4 w-4 text-muted-foreground" />
               <span className="font-semibold text-accent">
-                ${booking.load_size * trip.price_per_kg}
+                ₹{booking.load_size * trip.price_per_kg}
               </span>
             </div>
             <span className="text-sm text-muted-foreground">
-              ${trip.price_per_kg}/kg × {booking.load_size} kg
+              ₹{trip.price_per_kg}/kg × {booking.load_size} kg
             </span>
           </div>
 
@@ -513,7 +514,7 @@ export default function CarrierBookingsPage() {
             <ReviewForm
               fromUserId={user?.id || ""}
               toUserId={
-                bookings.find((b) => b.id === showReviewForm)?.shipper_id || ""
+                userBookings.find((b) => b.id === showReviewForm)?.shipper_id || ""
               }
               toUserName={
                 users.find(

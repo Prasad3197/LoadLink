@@ -31,3 +31,12 @@ class ReviewResponse(ReviewBase):
 
     class Config:
         orm_mode = True
+
+class ReviewOut(BaseModel):
+    id: UUID4
+    from_user_id: UUID4
+    to_user_id: UUID4
+    booking_id: UUID4
+    rating: int
+    comment: str | None
+    created_date: date

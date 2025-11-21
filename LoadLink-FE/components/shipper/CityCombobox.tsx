@@ -22,6 +22,8 @@ const CityCombobox: React.FC<CityComboboxProps> = ({ onCitySelect }) => {
     ).slice(0, 10); // Limit results for performance
   }, [searchTerm]);
 
+
+  
   // 2. Selection Handler
   const handleSelect = useCallback(
     (city: City) => {
@@ -87,6 +89,7 @@ const CityCombobox: React.FC<CityComboboxProps> = ({ onCitySelect }) => {
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => handleSelect(city)}
               className="px-4 py-2 cursor-pointer hover:bg-blue-50 transition duration-150 ease-in-out text-gray-800"
+              
             >
               {city.name}{" "}
               <span className="text-xs text-gray-500">({city.country})</span>

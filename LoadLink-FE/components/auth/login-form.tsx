@@ -121,22 +121,6 @@ export function LoginForm() {
               </Button>
             </SlideIn>
           </form>
-
-          <FadeIn delay={1.2}>
-            <div className="mt-6 p-4 bg-muted rounded-lg">
-              <p className="text-sm font-medium mb-2">Demo Accounts:</p>
-              <div className="space-y-2 text-xs">
-                <div className="flex items-center space-x-2 hover:bg-background p-2 rounded transition-colors duration-200">
-                  <Package className="h-4 w-4 text-blue-600" />
-                  <span>Shipper: john@example.com / password</span>
-                </div>
-                <div className="flex items-center space-x-2 hover:bg-background p-2 rounded transition-colors duration-200">
-                  <Truck className="h-4 w-4 text-amber-600" />
-                  <span>Carrier: mike@example.com / password</span>
-                </div>
-              </div>
-            </div>
-          </FadeIn>
         </CardContent>
       </Card>
     </FadeIn>

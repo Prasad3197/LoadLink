@@ -36,8 +36,8 @@ def create_trip(
     available_capacity = trip_in.available_capacity or total_capacity
     if available_capacity > total_capacity:
         raise HTTPException(status_code=400, detail="Available capacity cannot exceed vehicle capacity")
-    
-    # Create trip
+
+    # Create trip (NOW including route fields)
     trip = Trip(
         carrier_id=current_user.id,
         vehicle_id=trip_in.vehicle_id,
@@ -49,13 +49,23 @@ def create_trip(
         total_capacity=total_capacity,
         available_capacity=available_capacity,
         status=trip_in.status,
-        description=trip_in.description
+        description=trip_in.description,
+
+        # NEW FIELDS
+        origin_lat=trip_in.origin_lat,
+        origin_lng=trip_in.origin_lng,
+        destination_lat=trip_in.destination_lat,
+        destination_lng=trip_in.destination_lng,
+        distance_km=trip_in.distance_km,
+        duration_minutes=trip_in.duration_minutes,
+        route_geometry=trip_in.route_geometry
     )
 
     db.add(trip)
     db.commit()
     db.refresh(trip)
     return trip
+
 
 # ---------------------------
 # 1. View all active trips (for shippers)
@@ -116,7 +126,8 @@ def update_trip(
         trip.vehicle_id = trip_in.vehicle_id
     
     # Update optional fields
-    for field, value in trip_in.dict(exclude_unset=True).items():
+    update_data = trip_in.dict(exclude_unset=True)
+    for field, value in update_data.items():
         setattr(trip, field, value)
 
     # If available_capacity not provided, keep current or validate against vehicle capacity

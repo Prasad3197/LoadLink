@@ -2,7 +2,6 @@
 
 import api from "../lib/api";
 
-
 // ------------------
 // Types
 // ------------------
@@ -14,10 +13,12 @@ export interface UserOut {
   email: string;
   role: UserRole;
   phone: string;
-  rating?: number;
+  rating: number;
   review_count: number;
   joined_date: string; // ISO string from FastAPI
   avatar?: string;
+  reviewCount: number;
+  joinedDate: string;  
 }
 
 // ------------------
@@ -36,9 +37,15 @@ export const getUserByIdApi = async (userId: string): Promise<UserOut> => {
   return res.data;
 };
 
-
 // Get shipper by ID
-export const getShipperByIdApi = async (shipperId: string): Promise<UserOut> => {
+export const getShipperByIdApi = async (
+  shipperId: string
+): Promise<UserOut> => {
   const res = await api.get(`/users/shipper/${shipperId}`);
+  return res.data;
+};
+
+export const updateUserProfileApi = async (data: any) => {
+  const res = await api.put("/users/me", data);
   return res.data;
 };

@@ -2,7 +2,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { LayoutDashboard, Truck, Plus, Package, DollarSign, User } from "lucide-react"
+import { LayoutDashboard, Truck, Plus, Package, DollarSign, User, IndianRupee } from "lucide-react"
 
 const sidebarItems = [
   {
@@ -33,7 +33,7 @@ const sidebarItems = [
   {
     title: "Earnings",
     href: "/carrier/earnings",
-    icon: DollarSign,
+    icon: IndianRupee,
   },
   {
     title: "Profile",

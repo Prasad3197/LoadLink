@@ -22,8 +22,15 @@ export interface ReviewUpdate {
 export interface ReviewOut extends ReviewBase {
   id: string;
   from_user_id: string;
-  created_date: string; // ISO string
+  created_date: string;
+  to_user_id: string;
+  booking_id: string;
+  rating: number;
+  comment?: string; // ISO string
 }
+
+
+
 
 // ------------------
 // API calls
@@ -63,4 +70,11 @@ export const updateReviewApi = async (
 // Delete review
 export const deleteReviewApi = async (reviewId: string): Promise<void> => {
   await api.delete(`/reviews/${reviewId}`);
+};
+
+
+
+export const getMyReviewsApi = async () => {
+  const res = await api.get("/reviews/me");
+  return res.data; // list of ReviewOut
 };

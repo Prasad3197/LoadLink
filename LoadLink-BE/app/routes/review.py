@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from datetime import date
 
 from app import models
-from app.schemas.review import ReviewCreate, ReviewUpdate, ReviewResponse
+from app.schemas.review import ReviewCreate, ReviewOut, ReviewUpdate, ReviewResponse
 from app.dependencies import get_db, get_current_user
 
 router = APIRouter(prefix="/reviews", tags=["Reviews"])
@@ -26,6 +26,7 @@ def create_review(
     if review_in.to_user_id == current_user.id:
         raise HTTPException(status_code=400, detail="Cannot review yourself")
 
+    # Create review entry
     review = models.Review(
         booking_id=review_in.booking_id,
         from_user_id=current_user.id,
@@ -36,6 +37,31 @@ def create_review(
     )
 
     db.add(review)
+
+    # --- ⭐ Update the reviewed user's rating ---
+    user_being_reviewed = db.query(models.User).filter(
+        models.User.id == review_in.to_user_id
+    ).first()
+
+    if not user_being_reviewed:
+        raise HTTPException(status_code=404, detail="User not found for rating update")
+
+    # Ensure current rating and count are safe
+    old_rating = float(user_being_reviewed.rating or 0)
+    old_count = user_being_reviewed.review_count or 0
+
+    # New rating calculation
+    new_rating = (old_rating * old_count + review_in.rating) / (old_count + 1)
+
+    # Update user fields
+    user_being_reviewed.rating = round(new_rating, 1)  # store one decimal
+    user_being_reviewed.review_count = old_count + 1
+
+    db.commit()
+    db.refresh(review)
+
+    return review
+
 
     # ------------------
     # Update booking review flags
@@ -119,3 +145,17 @@ def delete_review(
     db.delete(review)
     db.commit()
     return
+
+@router.get("/reviews/me", response_model=list[ReviewOut])
+def get_my_reviews(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    reviews = (
+        db.query(models.Review)
+        .filter(models.Review.to_user_id == current_user.id)
+        .order_by(models.Review.created_date.desc())
+        .all()
+    )
+
+    return reviews

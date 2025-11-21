@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import type { Booking } from "@/lib/data"
 import { trips, users, dataActions, reviews } from "@/lib/data"
 import { ReviewForm } from "@/components/ui/review-form"
-import { MapPin, Calendar, Weight, DollarSign, CreditCard } from "lucide-react"
+import { MapPin, Calendar, Weight, DollarSign, CreditCard, IndianRupee } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { BookingOut } from "@/services/booking"
 import { getTripByIdApi, TripOut } from "@/services/trips"
@@ -67,7 +67,7 @@ export function BookingCard({ booking, onReview, onCancel, onRefresh }: BookingC
     const total = booking.load_size * trip.price_per_kg;
 
     if (
-      confirm(`Confirm payment of $${total.toLocaleString()} for this booking?`)
+      confirm(`Confirm payment of ₹${total.toLocaleString()} for this booking?`)
     ) {
       setIsProcessingPayment(true);
 
@@ -151,7 +151,7 @@ export function BookingCard({ booking, onReview, onCancel, onRefresh }: BookingC
 
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <IndianRupee className="h-4 w-4 text-muted-foreground" />
               <span className="font-semibold">{booking.load_size * (trip?.price_per_kg || 0)}</span>
             </div>
             <span className="text-sm text-muted-foreground">Carrier: {carrier.name}</span>

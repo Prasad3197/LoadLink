@@ -1,6 +1,6 @@
 from sqlalchemy import (
     Column, String, Date, ForeignKey, Boolean,
-    Numeric, Text, CheckConstraint,Integer
+    Numeric, Text, CheckConstraint,Integer,Float
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -64,6 +64,13 @@ class Trip(Base):
     total_capacity = Column(Integer, nullable=False)
     status = Column(String(20), nullable=False)  # active, completed, cancelled
     description = Column(Text)
+    origin_lat = Column(Float, nullable=True)
+    origin_lng = Column(Float, nullable=True)
+    destination_lat = Column(Float, nullable=True)
+    destination_lng = Column(Float, nullable=True)
+    distance_km = Column(Numeric(10, 2), nullable=True)
+    duration_minutes = Column(Integer, nullable=True)
+    route_geometry = Column(Text, nullable=True)
 
     carrier = relationship("User", back_populates="trips")
     vehicle = relationship("Vehicle", back_populates="trips")

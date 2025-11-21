@@ -16,7 +16,14 @@ export interface TripCreate {
   price_per_kg: number;
   available_capacity?: number;
   status: TripStatus;
-  description?: string;
+  description?: string | null;
+  origin_lat?: number | null;
+  origin_lng?: number | null;
+  destination_lat?: number | null;
+  destination_lng?: number | null;
+  distance_km?: number | null;
+  duration_minutes?: number | null;
+  route_geometry?: string | null;
 }
 
 export interface TripUpdate {
@@ -44,6 +51,13 @@ export interface TripOut {
   total_capacity: number;
   status: TripStatus;
   description?: string;
+  origin_lat?: number | null;
+  origin_lng?: number | null;
+  destination_lat?: number | null;
+  destination_lng?: number | null;
+  distance_km?: number | null;
+  duration_minutes?: number | null;
+  route_geometry?: string | null;
 }
 
 // ------------------

@@ -82,7 +82,6 @@ export const deleteBookingApi = async (bookingId: string): Promise<void> => {
   await api.delete(`/bookings/${bookingId}`);
 };
 
-
 // ------------------
 // Get bookings by Trip ID
 // ------------------
@@ -90,5 +89,10 @@ export const getBookingsByTripApi = async (
   tripId: string
 ): Promise<BookingOut[]> => {
   const res = await api.get(`/bookings/trip/${tripId}`);
+  return res.data;
+};
+
+export const getCarrierBookingsApi = async (): Promise<BookingOut[]> => {
+  const res = await api.get("/bookings/carriers");
   return res.data;
 };

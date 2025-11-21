@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/contexts/auth-context"
 import { trips, users, vehicles, bookings } from "@/lib/data"
-import { MapPin, Calendar, Truck, Star, Weight, DollarSign, User, Phone, Mail } from "lucide-react"
+import { MapPin, Calendar, Truck, Star, Weight, DollarSign, User, Phone, Mail, IndianRupee } from "lucide-react"
 import { getTripByIdApi, TripOut } from "@/services/trips"
 import { getUserByIdApi, UserOut } from "@/services/user"
 import { getVehicleByIdApi, VehicleOut } from "@/services/vehicles"
@@ -177,9 +177,9 @@ export default function TripDetailsPage() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  <IndianRupee className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <p className="font-medium">${trip.price_per_kg}/kg</p>
+                    <p className="font-medium">₹{trip.price_per_kg}/kg</p>
                     <p className="text-sm text-muted-foreground">
                       Price per kg
                     </p>
@@ -306,11 +306,11 @@ export default function TripDetailsPage() {
                     <div className="flex justify-between items-center">
                       <span className="font-medium">Total Price:</span>
                       <span className="text-2xl font-bold text-accent">
-                        ${totalPrice.toLocaleString()}
+                        ₹{totalPrice.toLocaleString()}
                       </span>
                     </div>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {loadSize} kg × ${trip.price_per_kg}/kg
+                      {loadSize} kg × ₹{trip.price_per_kg}/kg
                     </p>
                   </div>
                 )}

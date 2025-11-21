@@ -3,11 +3,27 @@ from sqlalchemy.orm import Session
 from datetime import date
 
 from app import models
-from app.schemas.booking import BookingResponse, BookingCreate, BookingUpdate
+from app.schemas.booking import BookingOut, BookingResponse, BookingCreate, BookingUpdate
 from app.dependencies import get_db, get_current_user
 
 
 router = APIRouter(prefix="/bookings", tags=["Bookings"])
+
+@router.get("/carriers", response_model=list[BookingOut])
+def get_carrier_bookings(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role != "carrier":
+        raise HTTPException(status_code=403, detail="Only carriers can view their bookings")
+
+    # 1. get all trips owned by this carrier
+    trip_ids = db.query(models.Trip.id).filter(models.Trip.carrier_id == current_user.id).subquery()
+
+    # 2. get all bookings for those trips
+    bookings = db.query(models.Booking).filter(models.Booking.trip_id.in_(trip_ids)).all()
+
+    return bookings
 
 
 @router.post("/", response_model=BookingResponse)
@@ -155,3 +171,5 @@ def get_bookings_by_trip(
 
     # Admin can see all bookings for this trip
     return db.query(models.Booking).filter_by(trip_id=trip_id).all()
+
+

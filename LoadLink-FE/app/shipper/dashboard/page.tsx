@@ -1,26 +1,34 @@
-"use client"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { SearchForm } from "@/components/common/search-form"
-import { BookingCard } from "@/components/shipper/booking-card"
-import { FadeIn } from "@/components/ui/fade-in"
-import { SlideIn } from "@/components/ui/slide-in"
-import { StaggerContainer, StaggerItem } from "@/components/ui/stagger-container"
-import { useAuth } from "@/contexts/auth-context"
+"use client";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { SearchForm } from "@/components/common/search-form";
+import { BookingCard } from "@/components/shipper/booking-card";
+import { FadeIn } from "@/components/ui/fade-in";
+import { SlideIn } from "@/components/ui/slide-in";
+import {
+  StaggerContainer,
+  StaggerItem,
+} from "@/components/ui/stagger-container";
+import { useAuth } from "@/contexts/auth-context";
 import { useEffect, useState } from "react";
-import { Package, Search, Clock, CheckCircle, CreditCard } from "lucide-react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { BookingOut, getBookingsApi } from "@/services/booking"
-import { getAllPaymentsApi, PaymentOut } from "@/services/payment"
+import { Package, Search, Clock, CheckCircle, CreditCard } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { BookingOut, getBookingsApi } from "@/services/booking";
+import { getAllPaymentsApi, PaymentOut } from "@/services/payment";
 
 export default function ShipperDashboard() {
-  
-  const { user, loading } = useAuth()
+  const { user, loading } = useAuth();
   const [bookings, setBookings] = useState<BookingOut[]>([]);
   const [payments, setPayments] = useState<PaymentOut[]>([]);
 
-  if (loading) return <div>Loading...</div>
+  if (loading) return <div>Loading...</div>;
   const router = useRouter();
   // if (!user || user.role !== "shipper") {
   //   router.push("/login")
@@ -32,7 +40,7 @@ export default function ShipperDashboard() {
       try {
         const bookingData = await getBookingsApi();
         const paymentData = await getAllPaymentsApi();
-        console.log("first,",paymentData)
+        console.log("first,", paymentData);
         // filter only current user’s data
         setBookings(bookingData.filter((b) => b.shipper_id === user?.id));
         setPayments(paymentData.filter((p) => p.from_user_id === user?.id));
@@ -46,41 +54,42 @@ export default function ShipperDashboard() {
     }
   }, [user?.id]);
 
-
- const recentBookings = bookings.slice(0, 3);
- const recentPayments = payments.slice(0, 3);
-console.log(recentBookings.length,recentPayments.length)
- const stats = {
-   totalBookings: bookings.length,
-   pendingBookings: bookings.filter((b) => b.status === "pending").length,
-   completedBookings: bookings.filter(
-     (b) => b.status === "fulfilled" || b.status === "paid"
-   ).length,
-   totalSpent: payments.reduce((sum, p) => sum + p.amount, 0),
- };
-
-
-  
+  const recentBookings = bookings.slice(0, 3);
+  const recentPayments = payments.slice(0, 3);
+  console.log(recentBookings.length, recentPayments.length);
+  const stats = {
+    totalBookings: bookings.length,
+    pendingBookings: bookings.filter((b) => b.status === "pending").length,
+    completedBookings: bookings.filter(
+      (b) => b.status === "fulfilled" || b.status === "paid"
+    ).length,
+    totalSpent: payments.reduce((sum, p) => sum + p.amount, 0),
+  };
 
   const handleQuickSearch = (searchData: {
-    origin: string
-    destination: string
-    date: string
+    origin: string;
+    destination: string;
+    date: string;
   }) => {
-    const params = new URLSearchParams()
-    if (searchData.origin) params.set("origin", searchData.origin)
-    if (searchData.destination) params.set("destination", searchData.destination)
-    if (searchData.date) params.set("date", searchData.date)
+    const params = new URLSearchParams();
+    if (searchData.origin) params.set("origin", searchData.origin);
+    if (searchData.destination)
+      params.set("destination", searchData.destination);
+    if (searchData.date) params.set("date", searchData.date);
 
     router.push(`/shipper/search?${params.toString()}`);
-  }
+  };
 
   return (
     <div className="space-y-6">
       <FadeIn>
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Welcome back, {user?.name}!</h1>
-          <p className="text-muted-foreground">Manage your shipments and find new carriers.</p>
+          <h1 className="text-3xl font-bold text-foreground">
+            Welcome back, {user?.name}!
+          </h1>
+          <p className="text-muted-foreground">
+            Manage your shipments and find new carriers.
+          </p>
         </div>
       </FadeIn>
 
@@ -89,7 +98,9 @@ console.log(recentBookings.length,recentPayments.length)
         <StaggerItem>
           <Card className="hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Total Bookings
+              </CardTitle>
               <Package className="h-4 w-4 text-muted-foreground transition-transform duration-300 hover:scale-110" />
             </CardHeader>
             <CardContent>
@@ -117,7 +128,9 @@ console.log(recentBookings.length,recentPayments.length)
               <CheckCircle className="h-4 w-4 text-muted-foreground transition-transform duration-300 hover:scale-110" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.completedBookings}</div>
+              <div className="text-2xl font-bold">
+                {stats.completedBookings}
+              </div>
             </CardContent>
           </Card>
         </StaggerItem>
@@ -129,7 +142,9 @@ console.log(recentBookings.length,recentPayments.length)
               <CreditCard className="h-4 w-4 text-muted-foreground transition-transform duration-300 hover:scale-110" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${stats.totalSpent.toLocaleString()}</div>
+              <div className="text-2xl font-bold">
+                ₹{stats.totalSpent.toLocaleString()}
+              </div>
             </CardContent>
           </Card>
         </StaggerItem>
@@ -143,7 +158,9 @@ console.log(recentBookings.length,recentPayments.length)
               <Search className="h-5 w-5" />
               <span>Quick Search</span>
             </CardTitle>
-            <CardDescription>Find carriers for your next shipment</CardDescription>
+            <CardDescription>
+              Find carriers for your next shipment
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <SearchForm onSearch={handleQuickSearch} />
@@ -179,8 +196,13 @@ console.log(recentBookings.length,recentPayments.length)
                 </StaggerContainer>
               ) : (
                 <div className="text-center py-4">
-                  <p className="text-muted-foreground mb-4">No bookings yet. Start by searching for trips!</p>
-                  <Button asChild className="transform hover:scale-105 transition-all duration-200">
+                  <p className="text-muted-foreground mb-4">
+                    No bookings yet. Start by searching for trips!
+                  </p>
+                  <Button
+                    asChild
+                    className="transform hover:scale-105 transition-all duration-200"
+                  >
                     <Link href="/trips">Search Trips</Link>
                   </Button>
                 </div>
@@ -211,24 +233,34 @@ console.log(recentBookings.length,recentPayments.length)
               {recentPayments.length > 0 ? (
                 <StaggerContainer>
                   {recentPayments.map((payment) => {
-                    const booking = bookings.find((b) => b.id === payment.booking_id)
+                    const booking = bookings.find(
+                      (b) => b.id === payment.booking_id
+                    );
                     return (
                       <StaggerItem key={payment.id}>
                         <div className="flex items-center justify-between p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors duration-200">
                           <div>
-                            <p className="text-sm font-medium">Payment #{payment.id.slice(-4)}</p>
+                            <p className="text-sm font-medium">
+                              Payment #{payment.id.slice(-4)}
+                            </p>
                             <p className="text-xs text-muted-foreground">
                               Booking #{booking?.id} •{" "}
-                              {new Date(payment.completed_date || payment.created_date).toLocaleDateString()}
+                              {new Date(
+                                payment.completed_date || payment.created_date
+                              ).toLocaleDateString()}
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="font-semibold text-accent">${payment.amount.toLocaleString()}</p>
-                            <p className="text-xs text-green-600">{payment.status}</p>
+                            <p className="font-semibold text-accent">
+                              ₹{payment.amount.toLocaleString()}
+                            </p>
+                            <p className="text-xs text-green-600">
+                              {payment.status}
+                            </p>
                           </div>
                         </div>
                       </StaggerItem>
-                    )
+                    );
                   })}
                 </StaggerContainer>
               ) : (
@@ -241,5 +273,5 @@ console.log(recentBookings.length,recentPayments.length)
         </SlideIn>
       </div>
     </div>
-  )
+  );
 }

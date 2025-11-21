@@ -1,70 +1,89 @@
-"use client"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { TripManagementCard } from "@/components/carrier/trip-management-card"
-import { useAuth } from "@/contexts/auth-context"
-import { trips, bookings, vehicles, payments } from "@/lib/data"
-import { Truck, Package, DollarSign, Star, Plus, CreditCard } from "lucide-react"
-import Link from "next/link"
-import { getMyVehiclesApi, VehicleOut } from "@/services/vehicles"
-import { useEffect, useState } from "react"
-import { getMyTripsApi, TripOut } from "@/services/trips"
-import { getAllPaymentsApi, PaymentOut } from "@/services/payment"
-import { getShipperByIdApi, UserOut } from "@/services/user"
-import { set } from "date-fns"
+"use client";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { TripManagementCard } from "@/components/carrier/trip-management-card";
+import { useAuth } from "@/contexts/auth-context";
+import { trips, bookings, vehicles, payments } from "@/lib/data";
+import {
+  Truck,
+  Package,
+  DollarSign,
+  Star,
+  Plus,
+  CreditCard,
+} from "lucide-react";
+import Link from "next/link";
+import { getMyVehiclesApi, VehicleOut } from "@/services/vehicles";
+import { useEffect, useState } from "react";
+import { getMyTripsApi, TripOut } from "@/services/trips";
+import { getAllPaymentsApi, PaymentOut } from "@/services/payment";
+import { getShipperByIdApi, UserOut } from "@/services/user";
+import { set } from "date-fns";
 
 export default function CarrierDashboard() {
-  const { user } = useAuth()
+  const { user } = useAuth();
   const [trips, setTrips] = useState<TripOut[]>([]);
   const [vehicles, setVehicles] = useState<VehicleOut[]>([]);
   const [payments, setPayments] = useState<PaymentOut[]>([]);
-  const [userData, setUserData] = useState<UserOut>(); // Adjust type as needed
-    useEffect(() => {
-      async function fetchData() {
-        try {
-          const [tripsRes, vehiclesRes] = await Promise.all([
-            getMyTripsApi(),
-            getMyVehiclesApi(),
+  const [userData, setUserData] = useState<UserOut>();
+  const [rating, setRating] = useState<number>(0); // Adjust type as needed
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [tripsRes, vehiclesRes] = await Promise.all([
+          getMyTripsApi(),
+          getMyVehiclesApi(),
+        ]);
+        setTrips(tripsRes);
+        setVehicles(vehiclesRes);
 
-          ]);
-          setTrips(tripsRes);
-          setVehicles(vehiclesRes);
-
-          // if payments exist
-          const userres=await getShipperByIdApi(user?.id || "")
-          setUserData(userres)
-          const paymentsRes = await getAllPaymentsApi();
-          setPayments(paymentsRes);
-        } catch (err) {
-          console.error("Error fetching dashboard data:", err);
-        }
+        // if payments exist
+        const userres = await getShipperByIdApi(user?.id || "");
+        setUserData(userres);
+        setRating(userres.rating || 0);
+        console.log(userres);
+        const paymentsRes = await getAllPaymentsApi();
+        setPayments(paymentsRes);
+      } catch (err) {
+        console.error("Error fetching dashboard data:", err);
       }
+    }
 
-      if (user) fetchData();
-    }, [user]);
-  const userTrips = trips.filter((t) => t.carrier_id === user?.id)
-  const userVehicles = vehicles.filter((v) => v.carrier_id === user?.id)
+    if (user) fetchData();
+  }, [user]);
+  const userTrips = trips.filter((t) => t.carrier_id === user?.id);
+  const userVehicles = vehicles.filter((v) => v.carrier_id === user?.id);
   const userBookings = bookings.filter((b) => {
-    const trip = trips.find((t) => t.id === b.trip_id)
-    return trip?.carrier_id === userData?.id
-  })
-  const recentTrips = userTrips.slice(0, 3)
+    const trip = trips.find((t) => t.id === b.trip_id);
+    return trip?.carrier_id === userData?.id;
+  });
+  const recentTrips = userTrips.slice(0, 3);
 
-  const userPayments = payments.filter((p) => p.to_user_id === user?.id)
-  const recentPayments = userPayments.slice(0, 3)
+  const userPayments = payments.filter((p) => p.to_user_id === user?.id);
+  const recentPayments = userPayments.slice(0, 3);
 
   const stats = {
     activeTrips: userTrips.filter((t) => t.status === "active").length,
     totalEarnings: userPayments.reduce((sum, p) => sum + p.amount, 0),
     totalVehicles: userVehicles.length,
-    avgRating: userData?.rating || 4,
-  }
+    avgRating: rating ,
+  };
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Welcome back, {user?.name}!</h1>
-        <p className="text-muted-foreground">Manage your trips and grow your business.</p>
+        <h1 className="text-3xl font-bold text-foreground">
+          Welcome back, {user?.name}!
+        </h1>
+        <p className="text-muted-foreground">
+          Manage your trips and grow your business.
+        </p>
       </div>
 
       {/* Stats Cards */}
@@ -81,11 +100,15 @@ export default function CarrierDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Earnings</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Earnings
+            </CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${stats.totalEarnings.toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              ₹{stats.totalEarnings.toLocaleString()}
+            </div>
           </CardContent>
         </Card>
 
@@ -105,7 +128,9 @@ export default function CarrierDashboard() {
             <Star className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.avgRating.toFixed(1)}</div>
+            <div className="text-2xl font-bold">
+              {stats.avgRating.toFixed(1)}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -153,10 +178,14 @@ export default function CarrierDashboard() {
           </CardHeader>
           <CardContent className="space-y-4">
             {recentTrips.length > 0 ? (
-              recentTrips.map((trip) => <TripManagementCard key={trip.id} trip={trip} />)
+              recentTrips.map((trip) => (
+                <TripManagementCard key={trip.id} trip={trip} />
+              ))
             ) : (
               <div className="text-center py-4">
-                <p className="text-muted-foreground mb-4">No trips yet. Create your first trip!</p>
+                <p className="text-muted-foreground mb-4">
+                  No trips yet. Create your first trip!
+                </p>
                 <Button asChild>
                   <Link href="/carrier/create-trip">Create Trip</Link>
                 </Button>
@@ -181,8 +210,12 @@ export default function CarrierDashboard() {
             {recentPayments.length > 0 ? (
               <div className="space-y-3">
                 {recentPayments.map((payment) => {
-                  const booking = bookings.find((b) => b.id === payment.booking_id)
-                  const trip = booking ? trips.find((t) => t.id === booking.trip_id) : null
+                  const booking = bookings.find(
+                    (b) => b.id === payment.booking_id
+                  );
+                  const trip = booking
+                    ? trips.find((t) => t.id === booking.trip_id)
+                    : null;
                   return (
                     <div
                       key={payment.id}
@@ -190,19 +223,27 @@ export default function CarrierDashboard() {
                     >
                       <div>
                         <p className="text-sm font-medium">
-                          {trip ? `${trip.origin} → ${trip.destination}` : `Payment #${payment.id.slice(-4)}`}
+                          {trip
+                            ? `${trip.origin} → ${trip.destination}`
+                            : `Payment #${payment.id.slice(-4)}`}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {booking?.load_size.toLocaleString()} kg •{" "}
-                          {new Date(payment.completed_date || payment.created_date).toLocaleDateString()}
+                          {new Date(
+                            payment.completed_date || payment.created_date
+                          ).toLocaleDateString()}
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold text-accent">${payment.amount.toLocaleString()}</p>
-                        <p className="text-xs text-green-600">{payment.status}</p>
+                        <p className="font-semibold text-accent">
+                          ₹{payment.amount.toLocaleString()}
+                        </p>
+                        <p className="text-xs text-green-600">
+                          {payment.status}
+                        </p>
                       </div>
                     </div>
-                  )
+                  );
                 })}
               </div>
             ) : (
@@ -214,5 +255,5 @@ export default function CarrierDashboard() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

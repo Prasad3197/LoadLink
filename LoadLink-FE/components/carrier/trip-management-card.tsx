@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import type { Trip } from "@/lib/data"
 import { vehicles, bookings } from "@/lib/data"
-import { MapPin, Calendar, Weight, DollarSign, Package } from "lucide-react"
+import { MapPin, Calendar, Weight, DollarSign, Package, IndianRupee } from "lucide-react"
 import { TripOut } from "@/services/trips"
 
 interface TripManagementCardProps {
@@ -69,22 +69,32 @@ export function TripManagementCard({ trip, onViewBookings, onEdit, onCancel }: T
 
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-            <span className="font-semibold">${trip.price_per_kg}/kg</span>
+            <IndianRupee className="h-4 w-4 text-muted-foreground" />
+            <span className="font-semibold">₹{trip.price_per_kg}/kg</span>
           </div>
-          {vehicle && <span className="text-sm text-muted-foreground capitalize">{vehicle.type}</span>}
+          {vehicle && (
+            <span className="text-sm text-muted-foreground capitalize">
+              {vehicle.type}
+            </span>
+          )}
         </div>
 
         {pendingBookings.length > 0 && (
           <div className="flex items-center space-x-2 p-2 bg-yellow-50 rounded">
             <Package className="h-4 w-4 text-yellow-600" />
-            <span className="text-sm text-yellow-800">{pendingBookings.length} pending booking(s)</span>
+            <span className="text-sm text-yellow-800">
+              {pendingBookings.length} pending booking(s)
+            </span>
           </div>
         )}
 
         <div className="flex space-x-2 pt-2">
           {onViewBookings && (
-            <Button size="sm" variant="outline" onClick={() => onViewBookings(trip.id)}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onViewBookings(trip.id)}
+            >
               View Bookings ({tripBookings.length})
             </Button>
           )}
@@ -94,12 +104,16 @@ export function TripManagementCard({ trip, onViewBookings, onEdit, onCancel }: T
             </Button>
           )}
           {trip.status === "active" && onCancel && (
-            <Button size="sm" variant="destructive" onClick={() => onCancel(trip.id)}>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => onCancel(trip.id)}
+            >
               Cancel
             </Button>
           )}
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

@@ -22,6 +22,13 @@ class TripCreate(BaseModel):
     available_capacity: Optional[int] = None  # optional, default to vehicle capacity
     status: TripStatus
     description: Optional[str] = None
+    origin_lat: Optional[float] = None
+    origin_lng: Optional[float] = None
+    destination_lat: Optional[float] = None
+    destination_lng: Optional[float] = None
+    distance_km: Optional[float] = None
+    duration_minutes: Optional[int] = None
+    route_geometry: Optional[str] = None
 
     @validator("arrival_date")
     def check_dates(cls, v, values):
@@ -69,6 +76,13 @@ class TripOut(BaseModel):
     total_capacity: int
     status: TripStatus
     description: Optional[str]
+    origin_lat: Optional[float]
+    origin_lng: Optional[float]
+    destination_lat: Optional[float]
+    destination_lng: Optional[float]
+    distance_km: Optional[float]
+    duration_minutes: Optional[int]
+    route_geometry: Optional[str]
 
     class Config:
         orm_mode = True

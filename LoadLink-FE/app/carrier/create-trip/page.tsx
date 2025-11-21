@@ -1,18 +1,26 @@
-"use client"
-import { useEffect, useState } from "react"
-import type React from "react"
+"use client";
+import { useEffect, useState } from "react";
+import type React from "react";
 
-import { useRouter } from "next/navigation"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { useAuth } from "@/contexts/auth-context"
-import {  trips } from "@/lib/data"
-import { ArrowRight, MapPin, Calendar, DollarSign } from "lucide-react"
-import { getMyVehiclesApi, VehicleOut } from "@/services/vehicles"
-import { createTripApi, TripCreate } from "@/services/trips"
+import { useRouter } from "next/navigation";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/contexts/auth-context";
+import { ArrowRight, MapPin, Calendar, DollarSign, IndianRupee } from "lucide-react";
+import { getMyVehiclesApi, VehicleOut } from "@/services/vehicles";
+import { createTripApi, TripCreate } from "@/services/trips";
+import CityInput from "@/components/common/CityInput";
+import RouteMap from "@/components/common/RouteMap";
+import type { City } from "@/types/city";
 
 export default function CreateTripPage() {
   const { user } = useAuth();
@@ -20,6 +28,7 @@ export default function CreateTripPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [vehicles, setVehicles] = useState<VehicleOut[]>([]);
+
   const [formData, setFormData] = useState({
     vehicleId: "",
     origin: "",
@@ -29,6 +38,16 @@ export default function CreateTripPage() {
     pricePerKg: "",
     description: "",
   });
+
+  // new: route-related state
+  const [fromCity, setFromCity] = useState<City | null>(null);
+  const [toCity, setToCity] = useState<City | null>(null);
+  const [route, setRoute] = useState<any>(null);
+  const [loadingRoute, setLoadingRoute] = useState(false);
+  const [routeInfo, setRouteInfo] = useState<{
+    distanceKm: number;
+    durationMin: number;
+  } | null>(null);
 
   // Fetch vehicles from API
   useEffect(() => {
@@ -44,8 +63,6 @@ export default function CreateTripPage() {
     };
     fetchVehicles();
   }, []);
-
-  console.log(vehicles);
 
   const userVehicles = vehicles.filter(
     (v) => v.carrier_id === user?.id && v.is_active
@@ -64,34 +81,87 @@ export default function CreateTripPage() {
     }
   };
 
+  // helper: fetch route from Mapbox & update state
+  const fetchRoute = async (from: City, to: City) => {
+    try {
+      setLoadingRoute(true);
+      const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${from.center[0]},${from.center[1]};${to.center[0]},${to.center[1]}?geometries=geojson&access_token=${process.env.NEXT_PUBLIC_MAPBOX_KEY}`;
+
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (!data.routes || data.routes.length === 0) {
+        console.warn("No route found");
+        setRoute(null);
+        setRouteInfo(null);
+        return null;
+      }
+
+      const routeData = data.routes[0];
+
+      setRoute({
+        type: "Feature",
+        geometry: routeData.geometry,
+      });
+
+      setRouteInfo({
+        distanceKm: routeData.distance / 1000,
+        durationMin: Math.round(routeData.duration / 60),
+      });
+
+      return routeData;
+    } catch (error) {
+      console.error("Error fetching route:", error);
+      return null;
+    } finally {
+      setLoadingRoute(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedVehicle) return;
 
+    // ensure we have route info before saving
+    let routeData = null;
+    if (fromCity && toCity) {
+      // if not already fetched via "Preview route", fetch now
+      if (!routeInfo) {
+        routeData = await fetchRoute(fromCity, toCity);
+      }
+    }
+
     try {
-      // prepare payload in the format TripCreate expects
       const newTrip: TripCreate = {
         vehicle_id: formData.vehicleId,
         origin: formData.origin,
         destination: formData.destination,
-        departure_date: formData.departureDate, // must be ISO string (YYYY-MM-DDTHH:mm:ss)
+        departure_date: formData.departureDate,
         arrival_date: formData.arrivalDate,
         price_per_kg: Number(formData.pricePerKg),
         available_capacity: selectedVehicle.capacity,
         status: "active",
-        description: formData.description,
+        description: formData.description || null,
+
+        // NEW FIELDS (make them optional in your TripCreate type)
+        origin_lat: fromCity ? fromCity.center[1] : null,
+        origin_lng: fromCity ? fromCity.center[0] : null,
+        destination_lat: toCity ? toCity.center[1] : null,
+        destination_lng: toCity ? toCity.center[0] : null,
+        distance_km:
+          routeInfo?.distanceKm ??
+          (routeData ? routeData.distance / 1000 : null),
+        duration_minutes:
+          routeInfo?.durationMin ??
+          (routeData ? Math.round(routeData.duration / 60) : null),
+        route_geometry: route ? JSON.stringify(route.geometry) : null,
       };
-
-      // API call
+      console.log("neww trip",newTrip)
       const createdTrip = await createTripApi(newTrip);
-
       console.log("Trip created successfully:", createdTrip);
-
-      // redirect to trips list
       router.push("/carrier/trips");
     } catch (error) {
       console.error("Error creating trip:", error);
-      // optional: show toast notification
     }
   };
 
@@ -222,51 +292,41 @@ export default function CreateTripPage() {
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label
-                      htmlFor="origin"
-                      className="flex items-center space-x-2"
-                    >
+                    <Label className="flex items-center space-x-2">
                       <MapPin className="h-4 w-4" />
                       <span>Origin</span>
                     </Label>
-                    <Input
-                      id="origin"
+                    <CityInput
                       placeholder="Starting city"
-                      value={formData.origin}
-                      onChange={(e) =>
-                        setFormData({ ...formData, origin: e.target.value })
-                      }
-                      required
+                      onSelect={(city) => {
+                        setFromCity(city);
+                        setFormData((prev) => ({
+                          ...prev,
+                          origin: city.place_name,
+                        }));
+                      }}
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label
-                      htmlFor="destination"
-                      className="flex items-center space-x-2"
-                    >
+                    <Label className="flex items-center space-x-2">
                       <MapPin className="h-4 w-4" />
                       <span>Destination</span>
                     </Label>
-                    <Input
-                      id="destination"
+                    <CityInput
                       placeholder="Destination city"
-                      value={formData.destination}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          destination: e.target.value,
-                        })
-                      }
-                      required
+                      onSelect={(city) => {
+                        setToCity(city);
+                        setFormData((prev) => ({
+                          ...prev,
+                          destination: city.place_name,
+                        }));
+                      }}
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label
-                      htmlFor="departureDate"
-                      className="flex items-center space-x-2"
-                    >
+                    <Label className="flex items-center space-x-2">
                       <Calendar className="h-4 w-4" />
                       <span>Departure Date</span>
                     </Label>
@@ -285,10 +345,7 @@ export default function CreateTripPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label
-                      htmlFor="arrivalDate"
-                      className="flex items-center space-x-2"
-                    >
+                    <Label className="flex items-center space-x-2">
                       <Calendar className="h-4 w-4" />
                       <span>Arrival Date</span>
                     </Label>
@@ -306,6 +363,42 @@ export default function CreateTripPage() {
                     />
                   </div>
                 </div>
+
+                {fromCity && toCity && (
+                  <>
+                    <div className="flex items-center justify-between mt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fetchRoute(fromCity, toCity)}
+                        disabled={loadingRoute}
+                      >
+                        {loadingRoute
+                          ? "Loading route..."
+                          : "Preview route on map"}
+                      </Button>
+                      {routeInfo && (
+                        <div className="text-xs text-muted-foreground">
+                          Distance:{" "}
+                          <span className="font-medium">
+                            {routeInfo.distanceKm.toFixed(1)} km
+                          </span>{" "}
+                          · Duration:{" "}
+                          <span className="font-medium">
+                            {routeInfo.durationMin} min
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {route && (
+                      <div className="mt-3">
+                        <RouteMap from={fromCity} to={toCity} route={route} />
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             )}
 
@@ -313,12 +406,9 @@ export default function CreateTripPage() {
             {currentStep === 3 && (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label
-                    htmlFor="pricePerKg"
-                    className="flex items-center space-x-2"
-                  >
-                    <DollarSign className="h-4 w-4" />
-                    <span>Price per kg ($)</span>
+                  <Label className="flex items-center space-x-2">
+                    <IndianRupee className="h-4 w-4" />
+                    <span>Price per kg (₹)</span>
                   </Label>
                   <Input
                     id="pricePerKg"
@@ -327,7 +417,10 @@ export default function CreateTripPage() {
                     placeholder="Enter price per kg"
                     value={formData.pricePerKg}
                     onChange={(e) =>
-                      setFormData({ ...formData, pricePerKg: e.target.value })
+                      setFormData({
+                        ...formData,
+                        pricePerKg: e.target.value,
+                      })
                     }
                     required
                   />
@@ -349,7 +442,7 @@ export default function CreateTripPage() {
                           Max Potential Earnings:
                         </span>
                         <span className="font-medium text-accent">
-                          $
+                          ₹
                           {(
                             selectedVehicle.capacity *
                             Number.parseFloat(formData.pricePerKg)
@@ -367,7 +460,10 @@ export default function CreateTripPage() {
                     placeholder="Add any special notes about this trip..."
                     value={formData.description}
                     onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
+                      setFormData({
+                        ...formData,
+                        description: e.target.value,
+                      })
                     }
                     rows={3}
                   />
