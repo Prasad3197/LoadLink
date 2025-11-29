@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loadlink-be
+  namespace: loadlink-ns
+spec:
+  replicas: 1  # Scale as needed
+  selector:
+    matchLabels:
+      app: loadlink-be
+  template:
+    metadata:
+      labels:
+        app: loadlink-be
+    spec:
+      containers:
+      - name: loadlink-be
+        image: LOADLINK_BE_IMAGE  # Placeholder; Jenkins replaces
+        ports:
+        - containerPort: 8000
+        env:
+        - name: DATABASE_URL
+          value: postgres://loadlink:secret@postgres-svc:5432/loadlink
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: loadlink-be-svc
+  namespace: loadlink-ns
+spec:
+  selector:
+    app: loadlink-be
+  ports:
+  - port: 8000
+    targetPort: 8000
