@@ -1,18 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',           // THIS IS THE MAGIC LINE – forces .next/standalone folder
+  output: 'standalone',           // THIS IS THE ONLY LINE THAT MATTERS
   reactStrictMode: true,
   swcMinify: true,
   images: {
-    unoptimized: true             // most college setups need this
+    unoptimized: true
   },
-  // Optional – makes build faster & smaller in CI
   eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: false,
-  },
+    ignoreDuringBuilds: true
+  }
 };
 
-module.exports = nextConfig;
+export default nextConfig;
