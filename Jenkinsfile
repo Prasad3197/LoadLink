@@ -1,5 +1,5 @@
 pipeline {
-            agent {
+    agent {
         kubernetes {
             yaml '''
 apiVersion: v1
@@ -11,32 +11,34 @@ spec:
     securityContext:
       privileged: true
     env:
-      - name: DOCKER_TLS_CERTDIR
-        value: ""
+    - name: DOCKER_TLS_CERTDIR
+      value: ""
     args:
-      - "--insecure-registry=nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085"
+    - "--insecure-registry=nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085"
     volumeMounts:
-      - name: docker-storage
-        mountPath: /var/lib/docker
+    - name: docker-storage
+      mountPath: /var/lib/docker
 
   - name: sonar
     image: sonarsource/sonar-scanner-cli:latest
     command:
-      - cat
+    - cat
     tty: true
 
   - name: kubectl
-    image: bitnami/kubectl:1.28.3-debian-12-r2   # ← Valid tag with shell tools
+    image: bitnami/kubectl:latest          # This one WORKS in your college cluster
     command:
-      - cat
+    - cat
     tty: true
+    securityContext:
+      runAsUser: 0                          # Required by some clusters
     env:
-      - name: KUBECONFIG
-        value: /kube/config
+    - name: KUBECONFIG
+      value: /kube/config
     volumeMounts:
-      - name: kubeconfig-secret
-        mountPath: /kube/config
-        subPath: kubeconfig
+    - name: kubeconfig-secret
+      mountPath: /kube/config
+      subPath: kubeconfig
 
   volumes:
   - name: docker-storage
@@ -50,10 +52,8 @@ spec:
 
     environment {
         REGISTRY = "nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085"
-        REPO     = "2401065/loadlink"           // ← CHANGE TO YOUR ROLL NUMBER
-        VERSION  = "v${BUILD_NUMBER}"
-        SONAR_HOST = "http://my-sonarqube-sonarqube.sonarqube.svc.cluster.local:9000"
-        SONAR_TOKEN = "sqp_45fe0f8cc23078a97f0b89ce7edc36fe4558340a"   // ask faculty or use same format
+        NAMESPACE = "2401065"                     // ← YOUR ROLL NUMBER
+        IMAGE_TAG = "v${BUILD_NUMBER}"
     }
 
     stages {
@@ -62,9 +62,11 @@ spec:
                 container('dind') {
                     dir('LoadLink-BE') {
                         sh '''
-                            docker build -t ${REGISTRY}/${REPO}/loadlink-be:${VERSION} .
+                            sleep 10
+                            docker build -t loadlink-be:${IMAGE_TAG} .
+                            docker tag loadlink-be:${IMAGE_TAG} ${REGISTRY}/${NAMESPACE}/loadlink-be:${IMAGE_TAG}
                             docker login ${REGISTRY} -u admin -p Changeme@2025
-                            docker push ${REGISTRY}/${REPO}/loadlink-be:${VERSION}
+                            docker push ${REGISTRY}/${NAMESPACE}/loadlink-be:${IMAGE_TAG}
                         '''
                     }
                 }
@@ -76,9 +78,11 @@ spec:
                 container('dind') {
                     dir('LoadLink-FE') {
                         sh '''
-                            docker build -t ${REGISTRY}/${REPO}/loadlink-fe:${VERSION} .
+                            sleep 10
+                            docker build -t loadlink-fe:${IMAGE_TAG} .
+                            docker tag loadlink-fe:${IMAGE_TAG} ${REGISTRY}/${NAMESPACE}/loadlink-fe:${IMAGE_TAG}
                             docker login ${REGISTRY} -u admin -p Changeme@2025
-                            docker push ${REGISTRY}/${REPO}/loadlink-fe:${VERSION}
+                            docker push ${REGISTRY}/${NAMESPACE}/loadlink-fe:${IMAGE_TAG}
                         '''
                     }
                 }
@@ -88,25 +92,29 @@ spec:
         stage('SonarQube Analysis') {
             steps {
                 container('sonar') {
-                    sh '''
-                        sonar-scanner \
-                          -Dsonar.projectKey=${REPO}_loadlink \
-                          -Dsonar.sources=. \
-                          -Dsonar.host.url=${SONAR_HOST} \
-                          -Dsonar.token=${SONAR_TOKEN}
-                    '''
+                    withCredentials([string(credentialsId: 'sonar-token-2401065', variable: 'SONAR_TOKEN')]) {
+                        sh '''
+                            sonar-scanner \
+                              -Dsonar.projectKey=2401065_loadlink \
+                              -Dsonar.sources=. \
+                              -Dsonar.host.url=http://my-sonarqube-sonarqube.sonarqube.svc.cluster.local:9000 \
+                              -Dsonar.login=$SONAR_TOKEN
+                        '''
+                    }
                 }
             }
         }
 
-        stage('Deploy Postgres & App') {
+        stage('Deploy to Kubernetes') {
             steps {
                 container('kubectl') {
                     sh '''
-                        kubectl apply -f k8s/postgres.yaml -n ${REPO}
-                        envsubst < k8s/deployment.yaml | kubectl apply -f - -n ${REPO}
-                        kubectl rollout status deployment/loadlink-fe -n ${REPO}
-                        kubectl rollout status deployment/loadlink-be -n ${REPO}
+                        envsubst < k8s/postgres.yaml | kubectl apply -f - -n ${NAMESPACE}
+                        envsubst < k8s/deployment.yaml | kubectl apply -f - -n ${NAMESPACE}
+                        
+                        kubectl rollout status deployment/loadlink-postgres -n ${NAMESPACE} || true
+                        kubectl rollout status deployment/loadlink-be -n ${NAMESPACE}
+                        kubectl rollout status deployment/loadlink-fe -n ${NAMESPACE}
                     '''
                 }
             }
