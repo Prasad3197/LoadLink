@@ -7,62 +7,60 @@ kind: Pod
 spec:
   containers:
   - name: dind
-    image: docker:24.0-dind
+    image: docker:dind
     securityContext:
       privileged: true
     env:
-    - name: DOCKER_TLS_CERTDIR
-      value: ""
-    - name: DOCKER_HOST
-      value: tcp://localhost:2375
+      - name: DOCKER_TLS_CERTDIR
+        value: ""
     args:
-    - "--host=tcp://0.0.0.0:2375"
-    - "--tls=false"
-    - "--insecure-registry=172.16.19.18:8083"
+      - "--insecure-registry=nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085"
     volumeMounts:
-    - name: docker-storage
-      mountPath: /var/lib/docker
-
-  - name: docker
-    image: docker:24.0
-    command: ["cat"] tty: true
+      - name: docker-storage
+        mountPath: /var/lib/docker
+  - name: sonar
+    image: sonarsource/sonar-scanner-cli
+    command: ["cat"]
+    tty: true
+  - name: kubectl
+    image: registry.k8s.io/kubectl:v1.28.0
+    command: ["cat"]
+    tty: true
     env:
-    - name: DOCKER_HOST
-      value: tcp://localhost:2375
-
-  - name: node
-    image: node:20-alpine
-    command: ["cat"] tty: true
-
+      - name: KUBECONFIG
+        value: /kube/config
+    volumeMounts:
+      - name: kubeconfig-secret
+        mountPath: /kube/config
+        subPath: kubeconfig
   volumes:
   - name: docker-storage
     emptyDir: {}
+  - name: kubeconfig-secret
+    secret:
+      secretName: kubeconfig-secret
 '''
         }
     }
 
     environment {
-        REGISTRY = "172.16.19.18:8083"
-        TAG      = "v${BUILD_NUMBER}"
+        REGISTRY = "nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085"
+        REPO     = "2401065/loadlink"           // ← CHANGE TO YOUR ROLL NUMBER
+        VERSION  = "v${BUILD_NUMBER}"
+        SONAR_HOST = "http://my-sonarqube-sonarqube.sonarqube.svc.cluster.local:9000"
+        SONAR_TOKEN = "sqp_45fe0f8cc23078a97f0b89ce7edc36fe4558340a"   // ask faculty or use same format
     }
 
     stages {
         stage('Build & Push Backend') {
             steps {
-                container('docker') {
+                container('dind') {
                     dir('LoadLink-BE') {
-                        withCredentials([usernamePassword(credentialsId: 'nexus-credentials',
-                                                         usernameVariable: 'USER',
-                                                         passwordVariable: 'PASS')]) {
-                            sh '''
-                                echo "$PASS" | docker login -u $USER --password-stdin $REGISTRY
-                                docker build -t $REGISTRY/loadlink-be:$TAG .
-                                docker tag $REGISTRY/loadlink-be:$TAG $REGISTRY/loadlink-be:latest
-                                docker push $REGISTRY/loadlink-be:$TAG
-                                docker push $REGISTRY/loadlink-be:latest
-                                echo "BACKEND PUSHED SUCCESSFULLY"
-                            '''
-                        }
+                        sh '''
+                            docker build -t ${REGISTRY}/${REPO}/loadlink-be:${VERSION} .
+                            docker login ${REGISTRY} -u admin -p Changeme@2025
+                            docker push ${REGISTRY}/${REPO}/loadlink-be:${VERSION}
+                        '''
                     }
                 }
             }
@@ -70,37 +68,43 @@ spec:
 
         stage('Build & Push Frontend') {
             steps {
-                container('node') {
+                container('dind') {
                     dir('LoadLink-FE') {
-                        sh 'npm ci --legacy-peer-deps'
-                    }
-                }
-                container('docker') {
-                    dir('LoadLink-FE') {
-                        withCredentials([usernamePassword(credentialsId: 'nexus-credentials',
-                                                         usernameVariable: 'USER',
-                                                         passwordVariable: 'PASS')]) {
-                            sh '''
-                                echo "$PASS" | docker login -u $USER --password-stdin $REGISTRY
-                                docker build -t $REGISTRY/loadlink-fe:$TAG .
-                                docker tag $REGISTRY/loadlink-fe:$TAG $REGISTRY/loadlink-fe:latest
-                                docker push $REGISTRY/loadlink-fe:$TAG
-                                docker push $REGISTRY/loadlink-fe:latest
-                                echo "FRONTEND PUSHED SUCCESSFULLY"
-                            '''
-                        }
+                        sh '''
+                            docker build -t ${REGISTRY}/${REPO}/loadlink-fe:${VERSION} .
+                            docker login ${REGISTRY} -u admin -p Changeme@2025
+                            docker push ${REGISTRY}/${REPO}/loadlink-fe:${VERSION}
+                        '''
                     }
                 }
             }
         }
-    }
 
-    post {
-        always {
-            container('docker') { sh 'docker system prune -f || true' }
-            deleteDir()
+        stage('SonarQube Analysis') {
+            steps {
+                container('sonar') {
+                    sh '''
+                        sonar-scanner \
+                          -Dsonar.projectKey=${REPO}_loadlink \
+                          -Dsonar.sources=. \
+                          -Dsonar.host.url=${SONAR_HOST} \
+                          -Dsonar.token=${SONAR_TOKEN}
+                    '''
+                }
+            }
         }
-        success { echo "SUCCESS! Images ready:\nBackend → $REGISTRY/loadlink-be:$TAG\nFrontend → $REGISTRY/loadlink-fe:$TAG" }
-        failure { echo "FAILED - but you're so close!" }
+
+        stage('Deploy Postgres & App') {
+            steps {
+                container('kubectl') {
+                    sh '''
+                        kubectl apply -f k8s/postgres.yaml -n ${REPO}
+                        envsubst < k8s/deployment.yaml | kubectl apply -f - -n ${REPO}
+                        kubectl rollout status deployment/loadlink-fe -n ${REPO}
+                        kubectl rollout status deployment/loadlink-be -n ${REPO}
+                    '''
+                }
+            }
+        }
     }
 }

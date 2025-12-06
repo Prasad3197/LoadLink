@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: loadlink-fe
+  namespace: your-roll-number
+spec:
+  type: NodePort
+  ports:
+    - port: 3000
+      targetPort: 3000
+      nodePort: 32000 # change if conflict
+  selector:
+    app: loadlink-fe
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loadlink-fe
+  namespace: your-roll-number
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: loadlink-fe
+  template:
+    metadata:
+      labels:
+        app: loadlink-fe
+    spec:
+      containers:
+        - name: frontend
+          image: nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085/your-roll-number/loadlink-fe:${IMAGE_TAG}
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NEXT_PUBLIC_API_URL
+              value: "http://loadlink-be.your-roll-number.svc.cluster.local:8000"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: loadlink-be
+  namespace: your-roll-number
+spec:
+  ports:
+    - port: 8000
+      targetPort: 8000
+  selector:
+    app: loadlink-be
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loadlink-be
+  namespace: your-roll-number
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: loadlink-be
+  template:
+    metadata:
+      labels:
+        app: loadlink-be
+    spec:
+      containers:
+        - name: backend
+          image: nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085/your-roll-number/loadlink-be:${IMAGE_TAG}
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://loadlink_user:your-strong-password-2025@loadlink-postgres:5432/loadlink"
