@@ -87,9 +87,9 @@ export default function CarrierEarningsPage() {
     })
     .reduce((sum, p) => sum + p.amount, 0);
 
-  const completedBookings = userBookings.filter(
-    (b) => b.status === "paid" || b.status === "completed"
-  );
+const completedBookings = userBookings.filter(
+  (b) => b.status === "paid"
+);
 
   const avgEarningsPerTrip =
     completedBookings.length > 0 ? totalEarnings / completedBookings.length : 0;

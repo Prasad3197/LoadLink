@@ -9,9 +9,23 @@ export type BookingStatus =
   | "pending"
   | "accepted"
   | "fulfilled"
+  | "paid" // ADD THIS
   | "cancelled"
-  | "paid";
+  | "rejected";
 
+export interface BookingOut {
+  id: string;
+  trip_id: string;
+  shipper_id: string;
+  load_size: number;
+  status: BookingStatus; // ← now includes "paid"
+  notes?: string;
+  created_at: string;
+  fulfilled_date?: string;
+  paid_date?: string;
+  qr_generated?: boolean;
+  qr_generated_date?: string;
+}
 export interface BookingCreate {
   trip_id: string;
   load_size: number;
