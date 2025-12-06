@@ -1,5 +1,5 @@
 pipeline {
-        agent {
+            agent {
         kubernetes {
             yaml '''
 apiVersion: v1
@@ -24,10 +24,9 @@ spec:
     command:
       - cat
     tty: true
-    # ↑ this image DOES have cat
 
   - name: kubectl
-    image: bitnami/kubectl:1.28   # ← THIS IS THE IMPORTANT CHANGE
+    image: bitnami/kubectl:1.28.3-debian-12-r2   # ← Valid tag with shell tools
     command:
       - cat
     tty: true
