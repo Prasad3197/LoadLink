@@ -29,7 +29,11 @@ import {
 } from "lucide-react";
 import { TripOut } from "@/services/trips";
 import { useEffect } from "react";
-import { BookingOut, getBookingsByTripApi, updateBookingApi } from "@/services/booking";  
+import {
+  BookingOut,
+  getBookingsByTripApi,
+  updateBookingApi,
+} from "@/services/booking";
 import { getMyTripsApi } from "@/services/trips";
 import { tr } from "date-fns/locale";
 import { getShipperByIdApi, UserOut } from "@/services/user";
@@ -43,8 +47,6 @@ export default function CarrierBookingsPage() {
   const [showQR, setShowQR] = useState<string | null>(null);
   const [showReviewForm, setShowReviewForm] = useState<string | null>(null);
   const [shippers, setShippers] = useState<UserOut[]>([]);
-
-
 
   const [loading, setLoading] = useState(true);
 
@@ -60,16 +62,16 @@ export default function CarrierBookingsPage() {
         const allBookings: BookingOut[] = [];
         for (const trip of trips) {
           const bookings = await getBookingsByTripApi(trip.id);
-          console.log("bookkkkkkk",bookings)
+          console.log("bookkkkkkk", bookings);
 
-           for (const booking of bookings) {
-             const exists = shippers.find((s) => s.id === booking.shipper_id);
-             if (!exists) {
-               const user = await getShipperByIdApi(booking.shipper_id);
-               setShippers((prev) => [...prev, user]);
-             }
-           }
-   
+          for (const booking of bookings) {
+            const exists = shippers.find((s) => s.id === booking.shipper_id);
+            if (!exists) {
+              const user = await getShipperByIdApi(booking.shipper_id);
+              setShippers((prev) => [...prev, user]);
+            }
+          }
+
           allBookings.push(...bookings);
         }
         setUserBookings(allBookings);
@@ -84,9 +86,8 @@ export default function CarrierBookingsPage() {
   }, []); // runs once on mount
 
   if (loading) return <div>Loading...</div>;
- 
-  console.log(shippers,"ghsfhgiuhsfiuguhfujio")
 
+  console.log(shippers, "ghsfhgiuhsfiuguhfujio");
 
   const pendingBookings = userBookings.filter((b) => b.status === "pending");
   const acceptedBookings = userBookings.filter((b) => b.status === "accepted");
@@ -187,12 +188,11 @@ export default function CarrierBookingsPage() {
     showFulfillAction = false,
     showQRAction = false
   ) => {
-    console.log(booking.shipper_id)
+    console.log(booking.shipper_id);
     const trip = userTrips.find((t) => t.id === booking.trip_id);
     const shipper = shippers.find((s) => s.id === booking.shipper_id);
-    console.log("ganpati bappa morya",shipper)
+    console.log("ganpati bappa morya", shipper);
     if (!shipper) return null;
-
 
     if (!trip || !shipper) return null;
 
@@ -494,7 +494,17 @@ export default function CarrierBookingsPage() {
           </DialogHeader>
           {showQR && (
             <QRCodeDisplay
-              amount={showQR ? (userBookings.find((b) => b.id === showQR)?.load_size || 0) * (userTrips.find((t) => t.id === userBookings.find((b) => b.id === showQR)?.trip_id)?.price_per_kg || 0) : 0}
+              amount={
+                showQR
+                  ? (userBookings.find((b) => b.id === showQR)?.load_size ||
+                      0) *
+                    (userTrips.find(
+                      (t) =>
+                        t.id ===
+                        userBookings.find((b) => b.id === showQR)?.trip_id
+                    )?.price_per_kg || 0)
+                  : 0
+              }
               bookingId={showQR}
               onClose={() => setShowQR(null)}
             />
@@ -502,7 +512,7 @@ export default function CarrierBookingsPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog
+      {/* <Dialog
         open={!!showReviewForm}
         onOpenChange={() => setShowReviewForm(null)}
       >
@@ -514,7 +524,8 @@ export default function CarrierBookingsPage() {
             <ReviewForm
               fromUserId={user?.id || ""}
               toUserId={
-                userBookings.find((b) => b.id === showReviewForm)?.shipper_id || ""
+                userBookings.find((b) => b.id === showReviewForm)?.shipper_id ||
+                ""
               }
               toUserName={
                 users.find(
@@ -529,6 +540,37 @@ export default function CarrierBookingsPage() {
               onCancel={() => setShowReviewForm(null)}
             />
           )}
+        </DialogContent>
+      </Dialog> */}
+
+      <Dialog
+        open={!!showReviewForm}
+        onOpenChange={() => setShowReviewForm(null)}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Review Shipper</DialogTitle>
+          </DialogHeader>
+          {showReviewForm &&
+            (() => {
+              const booking = userBookings.find((b) => b.id === showReviewForm);
+              const shipper = shippers.find(
+                (s) => s.id === booking?.shipper_id
+              );
+              if (!booking || !shipper) return <p>Loading shipper info...</p>;
+
+              return (
+                <ReviewForm
+                  bookingId={showReviewForm}
+                  toUserId={booking.shipper_id}
+                  toUserName={shipper.name}
+                  fromUserId={user?.id || ""}
+                  userRole="carrier"
+                  onCancel={() => setShowReviewForm(null)}
+                  onSuccess={handleReviewSubmit} // ← CORRECT PROP NAME
+                />
+              );
+            })()}
         </DialogContent>
       </Dialog>
     </div>

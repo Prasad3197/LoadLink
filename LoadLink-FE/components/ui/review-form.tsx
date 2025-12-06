@@ -6,14 +6,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Star } from "lucide-react";
 import { createReviewApi } from "@/services/review";
 
-interface ReviewFormProps {
-  fromUserId: string;
+// In your ReviewForm.tsx file
+export interface ReviewFormProps {
+  bookingId: string;
   toUserId: string;
   toUserName: string;
-  bookingId: string;
   userRole: "shipper" | "carrier";
+  fromUserId?: string; // ← ADD THIS (optional)
   onCancel: () => void;
-  onSuccess?: () => void;
+  onSuccess: () => void; // ← THIS IS CORRECT, NOT onSubmit
 }
 
 export function ReviewForm({
