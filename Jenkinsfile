@@ -15,7 +15,10 @@ spec:
       value: ""
     - name: DOCKER_HOST
       value: tcp://localhost:2375
-    args: ["--host=tcp://0.0.0.0:2375", "--tls=false"]
+    args:
+    - "--host=tcp://0.0.0.0:2375"
+    - "--tls=false"
+    - "--insecure-registry=172.16.19.18:8083"          # ← YOUR NEXUS
     volumeMounts:
     - name: docker-storage
       mountPath: /var/lib/docker
@@ -41,47 +44,69 @@ spec:
     }
 
     environment {
-        REGISTRY = '172.16.19.18:8083'
-        TAG      = "${env.BUILD_NUMBER}"
+        REGISTRY = "172.16.19.18:8083"
+        BE_IMAGE  = "loadlink-be"
+        FE_IMAGE  = "loadlink-fe"
+        TAG       = "${env.BUILD_NUMBER}"
     }
 
     stages {
-        stage('Checkout') {
-            steps { checkout scm }
-        }
-
-        stage('Build & Push Backend') {
+        /* -------------------- 1. BUILD & PUSH BACKEND -------------------- */
+        stage("Build & Push Backend") {
             steps {
-                container('docker') {
-                    dir('LoadLink-BE') {
-                        sh '''
-                            echo "Building Backend..."
-                            docker build -t ${REGISTRY}/loadlink-be:${TAG} .
-                            docker tag ${REGISTRY}/loadlink-be:${TAG} ${REGISTRY}/loadlink-be:latest
-                            docker push ${REGISTRY}/loadlink-be:${TAG}
-                            docker push ${REGISTRY}/loadlink-be:latest
-                        '''
+                container("docker") {   // runs in 'docker' container
+                    dir("LoadLink-BE") {
+                        withCredentials([usernamePassword(credentialsId: 'nexus-credentials',
+                                                         usernameVariable: 'USER',
+                                                         passwordVariable: 'PASS')]) {
+                            sh '''
+                                echo "Logging in to Nexus..."
+                                echo "$PASS" | docker login -u $USER --password-stdin $REGISTRY
+
+                                echo "Building backend image..."
+                                docker build -t $REGISTRY/$BE_IMAGE:$TAG .
+                                docker tag $REGISTRY/$BE_IMAGE:$TAG $REGISTRY/$BE_IMAGE:latest
+
+                                echo "Pushing backend image..."
+                                docker push $REGISTRY/$BE_IMAGE:$TAG
+                                docker push $REGISTRY/$BE_IMAGE:latest
+
+                                echo "Backend image pushed successfully!"
+                            '''
+                        }
                     }
                 }
             }
         }
 
-        stage('Build & Push Frontend') {
+        /* -------------------- 2. BUILD & PUSH FRONTEND -------------------- */
+        stage("Build & Push Frontend") {
             steps {
-                container('node') {
-                    dir('LoadLink-FE') {
+                container("node") {
+                    dir("LoadLink-FE") {
                         sh 'npm ci --legacy-peer-deps'
                     }
                 }
-                container('docker') {
-                    dir('LoadLink-FE') {
-                        sh '''
-                            echo "Building Frontend..."
-                            docker build -t ${REGISTRY}/loadlink-fe:${TAG} .
-                            docker tag ${REGISTRY}/loadlink-fe:${TAG} ${REGISTRY}/loadlink-fe:latest
-                            docker push ${REGISTRY}/loadlink-fe:${TAG}
-                            docker push ${REGISTRY}/loadlink-fe:latest
-                        '''
+                container("docker") {
+                    dir("LoadLink-FE") {
+                        withCredentials([usernamePassword(credentialsId: 'nexus-credentials',
+                                                         usernameVariable: 'USER',
+                                                         passwordVariable: 'PASS')]) {
+                            sh '''
+                                echo "Logging in to Nexus (again)..."
+                                echo "$PASS" | docker login -u $USER --password-stdin $REGISTRY
+
+                                echo "Building frontend image..."
+                                docker build -t $REGISTRY/$FE_IMAGE:$TAG .
+                                docker tag $REGISTRY/$FE_IMAGE:$TAG $REGISTRY/$FE_IMAGE:latest
+
+                                echo "Pushing frontend image..."
+                                docker push $REGISTRY/$FE_IMAGE:$TAG
+                                docker push $REGISTRY/$FE_IMAGE:latest
+
+                                echo "Frontend image pushed successfully!"
+                            '''
+                        }
                     }
                 }
             }
@@ -90,10 +115,18 @@ spec:
 
     post {
         always {
-            container('docker') { sh 'docker system prune -f || true' }
+            container("docker") {
+                sh 'docker system prune -f || true'
+            }
             deleteDir()
         }
-        success { echo "SUCCESS! Images pushed with tag ${TAG}" }
-        failure { echo "FAILED" }
+        success {
+            echo "SUCCESS! Both images pushed"
+            echo "Backend : ${REGISTRY}/${BE_IMAGE}:${TAG}"
+            echo "Frontend: ${REGISTRY}/${FE_IMAGE}:${TAG}"
+        }
+        failure {
+            echo "BUILD FAILED"
+        }
     }
 }
