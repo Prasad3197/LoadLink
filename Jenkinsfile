@@ -15,7 +15,7 @@ spec:
       value: ""
     volumeMounts:
     - name: docker-storage
-    mountPath: /var/lib/docker
+      mountPath: /var/lib/docker
   - name: docker
     image: docker:24.0
     command: ["cat"]
@@ -41,7 +41,9 @@ spec:
 
     stages {
         stage('Checkout') {
-            steps { checkout scm }
+            steps {
+                checkout scm
+            }
         }
 
         stage('Build & Push Backend') {
@@ -49,6 +51,7 @@ spec:
                 container('docker') {
                     dir('LoadLink-BE') {
                         sh '''
+                            echo "Building Backend..."
                             docker build -t ${REGISTRY}/loadlink-be:${TAG} .
                             docker tag ${REGISTRY}/loadlink-be:${TAG} ${REGISTRY}/loadlink-be:latest
                             docker push ${REGISTRY}/loadlink-be:${TAG}
@@ -63,12 +66,13 @@ spec:
             steps {
                 container('node') {
                     dir('LoadLink-FE') {
-                        sh 'npm ci --legacy-peer-deps'   // or pnpm/yarn
+                        sh 'npm ci --legacy-peer-deps'
                     }
                 }
                 container('docker') {
                     dir('LoadLink-FE') {
                         sh '''
+                            echo "Building Frontend..."
                             docker build -t ${REGISTRY}/loadlink-fe:${TAG} .
                             docker tag ${REGISTRY}/loadlink-fe:${TAG} ${REGISTRY}/loadlink-fe:latest
                             docker push ${REGISTRY}/loadlink-fe:${TAG}
@@ -85,13 +89,15 @@ spec:
             container('docker') {
                 sh 'docker system prune -f || true'
             }
-            // Fallback if cleanWs plugin is missing
-            deleteDir()
+            deleteDir()   // works even without cleanWs plugin
         }
         success {
-            echo 'Build & Push succeeded! Images: 
-              Backend: ${REGISTRY}/loadlink-be:${TAG}
-              Frontend: ${REGISTRY}/loadlink-fe:${TAG}'
+            echo "BUILD SUCCESSFUL!"
+            echo "Backend image : ${REGISTRY}/loadlink-be:${TAG}"
+            echo "Frontend image: ${REGISTRY}/loadlink-fe:${TAG}"
+        }
+        failure {
+            echo "BUILD FAILED"
         }
     }
 }
