@@ -103,7 +103,7 @@ spec:
                           -Dsonar.projectKey=2401065_loadlink \
                           -Dsonar.sources=. \
                           -Dsonar.host.url=http://sonarqube.sonarqube.svc.cluster.local:9000 \
-                          -Dsonar.login=sqp_your_token_if_any || echo "SonarQube skipped or token missing"
+                          -Dsonar.login=sqp_45fe0f8cc23078a97f0b89ce7edc36fe4558340a
                     '''
                 }
             }

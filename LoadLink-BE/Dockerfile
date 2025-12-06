@@ -1,30 +1,17 @@
 # ---- Build Stage ----
-FROM python:3.11-slim AS builder
+FROM python:3.11-slim as builder
 WORKDIR /app
+COPY LoadLink-BE/requirements.txt .
+RUN pip install --user --no-cache-dir -r requirements.txt
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential gcc libpq-dev && \
-    rm -rf /var/lib/apt/lists/*
-
-# Copy only what's needed (relative to current folder)
-COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
-
-# ---- Final Stage ----
+# ---- Runtime Stage ----
 FROM python:3.11-slim
 WORKDIR /app
+COPY --from=builder /root/.local /root/.local
+COPY LoadLink-BE/app ./app
 
-RUN apt-get update && apt-get install -y --no-install-recommends libpq5 && \
-    rm -rf /var/lib/apt/lists/*
-
-COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-
-# Now copy the entire current folder (which IS the backend)
-COPY . .
-
-RUN useradd -m appuser
-USER appuser
+ENV PATH=/root/.local/bin:$PATH
+ENV PYTHONUNBUFFERED=1
 
 EXPOSE 8000
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
