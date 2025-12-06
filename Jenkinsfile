@@ -13,9 +13,13 @@ spec:
     env:
     - name: DOCKER_TLS_CERTDIR
       value: ""
+    - name: DOCKER_HOST
+      value: tcp://localhost:2375
+    args: ["--host=tcp://0.0.0.0:2375", "--tls=false"]
     volumeMounts:
     - name: docker-storage
       mountPath: /var/lib/docker
+
   - name: docker
     image: docker:24.0
     command: ["cat"]
@@ -23,10 +27,12 @@ spec:
     env:
     - name: DOCKER_HOST
       value: tcp://localhost:2375
+
   - name: node
     image: node:20-alpine
     command: ["cat"]
     tty: true
+
   volumes:
   - name: docker-storage
     emptyDir: {}
@@ -41,9 +47,7 @@ spec:
 
     stages {
         stage('Checkout') {
-            steps {
-                checkout scm
-            }
+            steps { checkout scm }
         }
 
         stage('Build & Push Backend') {
@@ -86,18 +90,10 @@ spec:
 
     post {
         always {
-            container('docker') {
-                sh 'docker system prune -f || true'
-            }
-            deleteDir()   // works even without cleanWs plugin
+            container('docker') { sh 'docker system prune -f || true' }
+            deleteDir()
         }
-        success {
-            echo "BUILD SUCCESSFUL!"
-            echo "Backend image : ${REGISTRY}/loadlink-be:${TAG}"
-            echo "Frontend image: ${REGISTRY}/loadlink-fe:${TAG}"
-        }
-        failure {
-            echo "BUILD FAILED"
-        }
+        success { echo "SUCCESS! Images pushed with tag ${TAG}" }
+        failure { echo "FAILED" }
     }
 }
