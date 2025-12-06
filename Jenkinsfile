@@ -1,5 +1,5 @@
 pipeline {
-    agent {
+        agent {
         kubernetes {
             yaml '''
 apiVersion: v1
@@ -18,13 +18,18 @@ spec:
     volumeMounts:
       - name: docker-storage
         mountPath: /var/lib/docker
+
   - name: sonar
-    image: sonarsource/sonar-scanner-cli
-    command: ["cat"]
+    image: sonarsource/sonar-scanner-cli:latest
+    command:
+      - cat
     tty: true
+    # ↑ this image DOES have cat
+
   - name: kubectl
-    image: registry.k8s.io/kubectl:v1.28.0
-    command: ["cat"]
+    image: bitnami/kubectl:1.28   # ← THIS IS THE IMPORTANT CHANGE
+    command:
+      - cat
     tty: true
     env:
       - name: KUBECONFIG
@@ -33,6 +38,7 @@ spec:
       - name: kubeconfig-secret
         mountPath: /kube/config
         subPath: kubeconfig
+
   volumes:
   - name: docker-storage
     emptyDir: {}
